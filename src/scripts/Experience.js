@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import gsap from 'gsap';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 
 export default class Experience {
   constructor() {
@@ -9,6 +10,7 @@ export default class Experience {
     };
 
     this.canvas = document.querySelector('.webgl');
+    this.gltfLoader = new GLTFLoader();
     this.scene = new THREE.Scene();
     this.clock = new THREE.Clock();
 
@@ -22,6 +24,7 @@ export default class Experience {
     });
 
     this.createCamera();
+    this.createLights();
     this.createObjects();
     this.createRenderer();
     this.animate();
@@ -31,6 +34,16 @@ export default class Experience {
       const element = experiences[i];
       observer.observe(element);
     }
+  }
+
+  createLights() {
+    const ambientLight = new THREE.AmbientLight('ffffff', 0.8);
+    this.scene.add(ambientLight);
+
+    const directionalLight = new THREE.DirectionalLight('ffffff', 4);
+    directionalLight.position.set(1, 2, 5);
+    directionalLight.castShadow = true;
+    this.scene.add(directionalLight);
   }
 
   createCamera() {
@@ -59,7 +72,14 @@ export default class Experience {
     });
     this.cube = new THREE.Mesh(geometry, material); // on applique la forme et le materiel pour faire un mesh
     this.cube.position.x = 2;
-    this.scene.add(this.cube);
+    //this.scene.add(this.cube);
+
+    this.gltfLoader.load('assets/models/ac/scene.gltf', (gltf) => {
+      this.model = gltf.scene;
+      this.model.scale.set(0.005, 0.005, 0.005);
+      this.model.rotation.x = 1.5;
+      this.scene.add(this.model);
+    });
   }
 
   resize() {
@@ -74,7 +94,7 @@ export default class Experience {
     // Update renderer
     this.renderer.setSize(this.sizes.width, this.sizes.height);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-
+    this.renderer.shadowMap.enabled = true;
     this.renderer.render(this.scene, this.camera);
   }
 
@@ -92,11 +112,27 @@ export default class Experience {
       const entry = entries[i];
       const target = entry.target;
 
-      if (entry.isIntersecting) {
-        gsap.to(this.cube.position, {
+      if (entry.isIntersecting && this.model) {
+        gsap.to(this.model.position, {
           duration: 1,
           ease: 'Power2.inOut',
           x: target.dataset.p,
+        });
+
+        gsap.to(this.model.rotation, {
+          duration: 1,
+          ease: 'Power2.inOut',
+          x: target.dataset.rX,
+          y: target.dataset.rY,
+          z: target.dataset.rZ,
+        });
+
+        //camera rotation
+        const cameraZ = 'cZ' in target.dataset ? target.dataset.cZ : 8;
+        gsap.to(this.camera.position, {
+          duration: 1,
+          ease: 'Power2.inOut',
+          z: cameraZ,
         });
       }
     }
